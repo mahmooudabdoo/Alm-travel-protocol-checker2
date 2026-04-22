@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>فحص بروتوكول تأشيرة إيطاليا</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:      #040c14;
+    --surface: #081524;
+    --card:    #0b1f33;
+    --border:  #132d47;
+    --accent:  #00c8f5;
+    --green:   #0aff8a;
+    --red:     #ff3d6e;
+    --gold:    #ffc947;
+    --purple:  #c47eff;
+    --text:    #c5ddf0;
+    --dim:     #4a7090;
+  }
+  *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+
+  body {
+    background:var(--bg); color:var(--text);
+    font-family:'Cairo',sans-serif;
+    min-height:100vh; display:flex; flex-direction:column;
+    align-items:center; padding:28px 16px 60px;
+  }
+  body::before {
+    content:''; position:fixed; inset:0;
+    background-image:
+      linear-gradient(rgba(0,200,245,.04) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(0,200,245,.04) 1px,transparent 1px);
+    background-size:40px 40px; pointer-events:none; z-index:0;
+  }
+  .orb { position:fixed; border-radius:50%; filter:blur(100px); pointer-events:none; z-index:0; animation:drift 18s ease-in-out infinite alternate; }
+  .orb1 { width:380px;height:380px;background:rgba(0,200,245,.09);top:-80px;right:-80px; }
+  .orb2 { width:280px;height:280px;background:rgba(10,255,138,.06);bottom:-60px;left:-60px;animation-delay:-9s; }
+  @keyframes drift { from{transform:translate(0,0)} to{transform:translate(25px,18px)} }
+
+  .wrap { position:relative; z-index:1; width:100%; max-width:600px; }
+
+  /* header */
+  .header { text-align:center; margin-bottom:28px; }
+  .flag { font-size:2.4rem; display:block; margin-bottom:8px; animation:bob 3s ease-in-out infinite; }
+  @keyframes bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
+  .header h1 { font-size:1.55rem; font-weight:900; color:#fff; }
+  .header h1 span { color:var(--accent); }
+  .header p { margin-top:5px; font-size:.84rem; color:var(--dim); }
+
+  /* tabs */
+  .tabs { display:flex; gap:6px; margin-bottom:0; }
+  .tab {
+    flex:1; padding:11px; border:1px solid var(--border); border-bottom:none;
+    border-radius:12px 12px 0 0;
+    background:var(--surface); color:var(--dim);
+    font-family:'Cairo',sans-serif; font-size:.88rem; font-weight:700;
+    cursor:pointer; transition:all .2s; text-align:center;
+  }
+  .tab.active { background:var(--card); border-color:var(--border); color:var(--accent); }
+
+  /* card */
+  .card {
+    background:var(--card); border:1px solid var(--border);
+    border-radius:0 0 20px 20px; padding:26px 22px;
+    box-shadow:0 0 0 1px rgba(0,200,245,.05),0 20px 50px rgba(0,0,0,.6);
+    position:relative; overflow:hidden;
+  }
+  .card::before {
+    content:''; position:absolute; top:0;left:0;right:0; height:2px;
+    background:linear-gradient(90deg,transparent,var(--accent),var(--green),transparent);
+  }
+
+  .panel { display:none; }
+  .panel.active { display:block; }
+
+  /* fields */
+  .field { margin-bottom:15px; }
+  label { display:block; font-size:.75rem; font-weight:700; color:var(--dim); letter-spacing:.08em; text-transform:uppercase; margin-bottom:6px; }
+  .inp-wrap { position:relative; }
+  .inp-icon { position:absolute; right:13px; top:50%; transform:translateY(-50%); font-size:.95rem; pointer-events:none; color:var(--dim); transition:color .2s; }
+  input[type=text], input[type=password] {
+    width:100%; background:var(--surface); border:1px solid var(--border);
+    border-radius:11px; color:#fff; font-family:'Cairo',sans-serif; font-size:.96rem;
+    padding:12px 42px 12px 14px; outline:none;
+    transition:border-color .25s,box-shadow .25s; direction:ltr; text-align:right;
+  }
+  input:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(0,200,245,.12); }
+  input:focus + .inp-icon { color:var(--accent); }
+  input::placeholder { color:var(--dim); }
+
+  /* file drop zone */
+  .dropzone {
+    border:2px dashed var(--border); border-radius:14px;
+    padding:32px 20px; text-align:center; cursor:pointer;
+    transition:all .25s; background:var(--surface); margin-bottom:15px;
+    position:relative;
+  }
+  .dropzone:hover, .dropzone.drag { border-color:var(--accent); background:rgba(0,200,245,.05); }
+  .dropzone input[type=file] { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+  .dropzone-icon { font-size:2rem; display:block; margin-bottom:8px; }
+  .dropzone-text { font-size:.88rem; color:var(--dim); }
+  .dropzone-text strong { color:var(--accent); }
+  .dropzone-name { font-size:.82rem; color:var(--green); margin-top:6px; font-family:'JetBrains Mono',monospace; display:none; }
+
+  .file-format {
+    background:rgba(0,200,245,.05); border:1px solid rgba(0,200,245,.12);
+    border-radius:10px; padding:10px 14px; margin-bottom:15px;
+    font-family:'JetBrains Mono',monospace; font-size:.78rem; color:var(--dim); line-height:1.8;
+  }
+  .file-format span { color:var(--accent); }
+
+  /* button */
+  .btn {
+    width:100%; padding:13px; border:none; border-radius:11px;
+    background:linear-gradient(135deg,var(--accent) 0%,#007ab8 100%);
+    color:#fff; font-family:'Cairo',sans-serif; font-size:.98rem; font-weight:700;
+    cursor:pointer; transition:opacity .2s,transform .15s;
+    box-shadow:0 4px 20px rgba(0,200,245,.25);
+    margin-top:6px; display:flex; align-items:center; justify-content:center; gap:8px;
+  }
+  .btn:hover:not(:disabled) { opacity:.9; transform:translateY(-1px); }
+  .btn:disabled { opacity:.45; cursor:not-allowed; }
+  .spinner { width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:none; }
+  @keyframes spin { to{transform:rotate(360deg)} }
+
+  /* ── single result ── */
+  #result { margin-top:20px; display:none; animation:slideUp .35s ease; }
+  @keyframes slideUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:none} }
+  .res-inner { padding:18px 16px; border:1px solid; border-radius:14px; }
+  .res-title { display:flex; align-items:center; gap:10px; margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid rgba(255,255,255,.06); }
+  .res-icon { font-size:1.5rem; flex-shrink:0; }
+  .res-en { font-family:'JetBrains Mono',monospace; font-size:.95rem; font-weight:700; }
+  .res-proto-tag { font-family:'JetBrains Mono',monospace; font-size:.7rem; color:var(--dim); margin-top:2px; }
+  .res-notes { display:flex; flex-direction:column; gap:7px; }
+  .note { display:flex; gap:8px; align-items:flex-start; font-size:.83rem; line-height:1.6; }
+  .note-bullet { flex-shrink:0; margin-top:2px; }
+  .dob-tag { display:inline-block; font-family:'JetBrains Mono',monospace; font-size:.78rem; font-weight:700; padding:1px 8px; border-radius:5px; background:rgba(0,0,0,.3); margin:0 3px; }
+  .tg-link { display:inline-flex; align-items:center; gap:6px; font-family:'JetBrains Mono',monospace; font-weight:700; font-size:.86rem; text-decoration:none; padding:5px 13px; border-radius:8px; margin-top:3px; border:1px solid; transition:opacity .2s; }
+  .tg-link:hover { opacity:.8; }
+
+  .res-found    .res-inner { background:linear-gradient(135deg,rgba(10,255,138,.07),rgba(0,200,245,.04)); border-color:rgba(10,255,138,.28); }
+  .res-found    .res-en { color:var(--green); }
+  .res-found    .tg-link { color:var(--green); border-color:rgba(10,255,138,.3); background:rgba(10,255,138,.07); }
+  .res-notfound .res-inner { background:rgba(255,61,110,.07); border-color:rgba(255,61,110,.28); }
+  .res-notfound .res-en { color:var(--red); }
+  .res-notfound .dob-tag { color:var(--red); border:1px solid rgba(255,61,110,.3); }
+  .res-used     .res-inner { background:rgba(196,126,255,.07); border-color:rgba(196,126,255,.28); }
+  .res-used     .res-en { color:var(--purple); }
+  .res-error    .res-inner { background:rgba(255,201,71,.07); border-color:rgba(255,201,71,.25); }
+  .res-error    .res-en { color:var(--gold); }
+
+  /* ── bulk results ── */
+  #bulk-results { margin-top:24px; display:none; }
+
+  .bulk-header {
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:16px; flex-wrap:wrap; gap:10px;
+  }
+  .bulk-title { font-size:1rem; font-weight:700; color:#fff; }
+
+  .stats { display:flex; gap:8px; flex-wrap:wrap; }
+  .stat {
+    display:flex; align-items:center; gap:5px;
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:8px; padding:5px 12px; font-size:.8rem; font-weight:700;
+  }
+  .stat.s-found   { border-color:rgba(10,255,138,.3); color:var(--green); }
+  .stat.s-notfound{ border-color:rgba(255,61,110,.3);  color:var(--red); }
+  .stat.s-used    { border-color:rgba(196,126,255,.3); color:var(--purple); }
+  .stat.s-error   { border-color:rgba(255,201,71,.3);  color:var(--gold); }
+
+  /* progress bar */
+  .progress-wrap { margin-bottom:18px; }
+  .progress-label { display:flex; justify-content:space-between; font-size:.78rem; color:var(--dim); margin-bottom:6px; }
+  .progress-bar { height:6px; background:var(--surface); border-radius:99px; overflow:hidden; border:1px solid var(--border); }
+  .progress-fill { height:100%; background:linear-gradient(90deg,var(--accent),var(--green)); border-radius:99px; width:0%; transition:width .4s ease; }
+
+  /* result rows */
+  .bulk-list { display:flex; flex-direction:column; gap:10px; }
+
+  .bulk-row {
+    background:var(--card); border:1px solid var(--border);
+    border-radius:13px; padding:14px 16px;
+    display:grid; grid-template-columns:auto 1fr auto;
+    align-items:center; gap:12px;
+    animation:slideUp .3s ease;
+  }
+  .bulk-row.r-found    { border-color:rgba(10,255,138,.25);  background:linear-gradient(135deg,rgba(10,255,138,.06),rgba(0,200,245,.03)); }
+  .bulk-row.r-notfound { border-color:rgba(255,61,110,.22);  background:rgba(255,61,110,.05); }
+  .bulk-row.r-used     { border-color:rgba(196,126,255,.22); background:rgba(196,126,255,.05); }
+  .bulk-row.r-error    { border-color:rgba(255,201,71,.2);   background:rgba(255,201,71,.04); }
+  .bulk-row.r-pending  { border-color:var(--border); opacity:.6; }
+
+  .row-badge {
+    width:34px; height:34px; border-radius:50%; display:flex; align-items:center;
+    justify-content:center; font-size:1rem; flex-shrink:0;
+    background:rgba(0,0,0,.3);
+  }
+  .r-found    .row-badge { background:rgba(10,255,138,.12); }
+  .r-notfound .row-badge { background:rgba(255,61,110,.12); }
+  .r-used     .row-badge { background:rgba(196,126,255,.12); }
+  .r-error    .row-badge { background:rgba(255,201,71,.1); }
+
+  .row-info { min-width:0; }
+  .row-proto { font-family:'JetBrains Mono',monospace; font-size:.82rem; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .r-found    .row-proto { color:var(--green); }
+  .r-notfound .row-proto { color:var(--red); }
+  .r-used     .row-proto { color:var(--purple); }
+  .r-error    .row-proto { color:var(--gold); }
+  .r-pending  .row-proto { color:var(--dim); }
+
+  .row-user { font-size:.75rem; color:var(--dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px; }
+  .row-status { font-size:.75rem; font-weight:700; text-align:left; white-space:nowrap; }
+  .r-found    .row-status { color:var(--green); }
+  .r-notfound .row-status { color:var(--red); }
+  .r-used     .row-status { color:var(--purple); }
+  .r-error    .row-status { color:var(--gold); }
+  .r-pending  .row-status { color:var(--dim); }
+
+  /* spinning badge for pending */
+  .badge-spin { animation:spin .8s linear infinite; display:inline-block; }
+
+  .row-error-msg { font-size:.73rem; color:var(--gold); margin-top:3px; line-height:1.4; }
+  .dropzone-warn {
+    font-size:.8rem; color:var(--gold); margin-top:10px; display:none;
+    background:rgba(255,201,71,.08); border:1px solid rgba(255,201,71,.2);
+    border-radius:9px; padding:10px 14px; line-height:1.7; text-align:right;
+  }
+  .dropzone-warn code { font-family:'JetBrains Mono',monospace; color:var(--accent); font-size:.78rem; }
+  .btn-retry {
+    width:100%; padding:11px; border:none; border-radius:11px;
+    background:rgba(255,201,71,.12); border:1px solid rgba(255,201,71,.3);
+    color:var(--gold); font-family:'Cairo',sans-serif; font-size:.9rem; font-weight:700;
+    cursor:pointer; margin-top:12px; display:none;
+    align-items:center; justify-content:center; gap:8px;
+    transition:background .2s;
+  }
+  .btn-retry:hover { background:rgba(255,201,71,.2); }
+  /* brand */
+  .brand { display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:10px; }
+  .brand-icon { font-size:1.5rem; }
+  .brand-name { font-size:1.1rem; font-weight:900; color:#fff; letter-spacing:.05em; }
+
+  /* footer */
+  .footer { margin-top:24px; text-align:center; }
+  .footer-tg-btn {
+    display:inline-flex; align-items:center; gap:8px;
+    background:linear-gradient(135deg,#0088cc,#006aaa);
+    color:#fff; text-decoration:none; font-family:'Cairo',sans-serif;
+    font-weight:700; font-size:.92rem; padding:11px 22px;
+    border-radius:12px; box-shadow:0 4px 18px rgba(0,136,204,.3);
+    transition:opacity .2s, transform .15s; margin-bottom:10px;
+    border:1px solid rgba(255,255,255,.1);
+  }
+  .footer-tg-btn:hover { opacity:.88; transform:translateY(-1px); }
+  .footer-tg-handle { font-family:'JetBrains Mono',monospace; font-size:.8rem; opacity:.85; }
+  .footer-copy { font-size:.72rem; color:var(--dim); margin-top:6px; }
+</style>
+</head>
+<body>
+
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+
+<div class="wrap">
+  <header class="header">
+    <div class="brand">
+      <span class="brand-icon">✈️</span>
+      <span class="brand-name">Alm Travel</span>
+    </div>
+    <h1>فحص <span>بروتوكول التأشيرة</span></h1>
+    <p>فحص فردي أو رفع ملف لفحص متعدد</p>
+  </header>
+
+  <!-- tabs -->
+  <div class="tabs">
+    <div class="tab active" id="tab-single"    onclick="switchTab('single')">👤 فحص فردي</div>
+    <div class="tab"        id="tab-bulk"      onclick="switchTab('bulk')">📂 فحص ملف</div>
+  </div>
+
+  <div class="card">
+
+    <!-- ── Single ── -->
+    <div class="panel active" id="panel-single">
+      <div class="field">
+        <label>اسم المستخدم</label>
+        <div class="inp-wrap">
+          <input type="text" id="username" placeholder="email@example.com" autocomplete="off">
+          <span class="inp-icon">👤</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>كلمة المرور</label>
+        <div class="inp-wrap">
+          <input type="password" id="password" placeholder="••••••••">
+          <span class="inp-icon">🔒</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>رقم البروتوكول</label>
+        <div class="inp-wrap">
+          <input type="text" id="protocol" placeholder="EG-2025-XXXXXXX" autocomplete="off" spellcheck="false">
+          <span class="inp-icon">📋</span>
+        </div>
+      </div>
+      <button class="btn" id="btn-single" onclick="doSingle()">
+        <span id="btn-single-text">🔍 فحص الآن</span>
+        <div class="spinner" id="spin-single"></div>
+      </button>
+      <div id="result"></div>
+    </div>
+
+    <!-- ── Bulk ── -->
+    <div class="panel" id="panel-bulk">
+
+      <div class="file-format">
+        📄 فورمات الملف — كل سطر:<br>
+        <span>username:password:protocol</span><br>
+        <span style="color:var(--dim)">مثال:</span><br>
+        <span>user@mail.com:pass123:P-RM/L/Q/2026/100001</span><br>
+        <span>user2@mail.com:pass456:P-RM/L/Q/2026/100002</span>
+      </div>
+
+      <div class="dropzone" id="dropzone">
+        <input type="file" id="file-input" accept=".txt" onchange="onFileSelect(this)">
+        <span class="dropzone-icon">📁</span>
+        <div class="dropzone-text">اسحب الملف هنا أو <strong>اضغط للاختيار</strong></div>
+        <div class="dropzone-name" id="file-name"></div>
+      </div>
+      <div class="dropzone-warn" id="file-warn">
+        ⚠️ الملف فارغ أو التنسيق غلط!<br>
+        تأكد إن كل سطر بالشكل ده:<br>
+        <code>email@example.com:password:P-RM/L/Q/2026/XXXXXX</code>
+      </div>
+
+      <button class="btn" id="btn-bulk" onclick="doBulk()" disabled>
+        <span id="btn-bulk-text">📂 ابدأ الفحص</span>
+        <div class="spinner" id="spin-bulk"></div>
+      </button>
+    </div>
+
+  </div><!-- /card -->
+
+  <!-- bulk results (outside card) -->
+  <div id="bulk-results">
+    <div class="bulk-header">
+      <div class="bulk-title">📊 النتائج</div>
+      <div class="stats">
+        <div class="stat s-found">   ✅ <span id="cnt-found">0</span></div>
+        <div class="stat s-used">    🔒 <span id="cnt-used">0</span></div>
+        <div class="stat s-notfound">❌ <span id="cnt-notfound">0</span></div>
+        <div class="stat s-error">   ⚠️ <span id="cnt-error">0</span></div>
+      </div>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-label">
+        <span id="prog-label">جاري الفحص...</span>
+        <span id="prog-pct">0%</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="prog-fill"></div></div>
+    </div>
+    <div class="bulk-list" id="bulk-list"></div>
+    <button class="btn-retry" id="btn-retry" onclick="doRetry()">
+      <span>🔁 إعادة فحص الـ errors</span>
+    </button>
+  </div>
+
+  <div class="footer">
+    <a href="https://t.me/AlmTravel" target="_blank" class="footer-tg-btn">
+      <span>✈️</span>
+      <span>احجز موعد Almaviva</span>
+      <span class="footer-tg-handle">@AlmTravel</span>
+    </a>
+    <div class="footer-copy">البيانات لا تُحفظ • الاستعلام مباشر على Almaviva</div>
+  </div>
+</div>
+
+<script>
+const SERVER  = "http://localhost:5000"; // ← غيّره لـ URL بتاع Render بعد الـ deploy
+const API_KEY = "7b9fc91bca189cf83120ff36a78497cf97b614ab185594ea932feb1118c034e6"; // ← نفس الـ key في Render
+
+// ══════════════════════════════════════════
+// Tab switch
+// ══════════════════════════════════════════
+function switchTab(t) {
+  ['single','bulk'].forEach(n => {
+    document.getElementById('tab-'+n).classList.toggle('active', n===t);
+    document.getElementById('panel-'+n).classList.toggle('active', n===t);
+  });
+}
+
+
+
+
+// ══════════════════════════════════════════
+// File select
+// ══════════════════════════════════════════
+let bulkLines = [];
+
+function onFileSelect(inp) {
+  const file = inp.files[0];
+  if (!file) return;
+
+  const nameEl = document.getElementById('file-name');
+  const warnEl = document.getElementById('file-warn');
+  const btnEl  = document.getElementById('btn-bulk');
+  const btnTxt = document.getElementById('btn-bulk-text');
+
+  nameEl.textContent = '📄 ' + file.name;
+  nameEl.style.display = 'block';
+  warnEl.style.display = 'none';
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    const valid = e.target.result.split('\n')
+      .map(l => l.trim())
+      .filter(l => l && l.split(':').length >= 3);
+
+    if (valid.length === 0) {
+      // الملف فارغ أو فورمات غلط
+      bulkLines = [];
+      btnEl.disabled = true;
+      btnTxt.textContent = '📂 ابدأ الفحص';
+      warnEl.style.display = 'block';
+    } else {
+      bulkLines = e.target.result.split('\n').map(l => l.trim()).filter(l => l && l.includes(':'));
+      btnEl.disabled = false;
+      btnTxt.textContent = `📂 ابدأ الفحص (${valid.length} سطر)`;
+    }
+  };
+  reader.readAsText(file);
+}
+
+// drag & drop
+const dz = document.getElementById('dropzone');
+dz.addEventListener('dragover',  e => { e.preventDefault(); dz.classList.add('drag'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if (file) {
+    const fi = document.getElementById('file-input');
+    const dt = new DataTransfer(); dt.items.add(file); fi.files = dt.files;
+    onFileSelect(fi);
+  }
+});
+
+// ══════════════════════════════════════════
+// Result renderer (single)
+// ══════════════════════════════════════════
+function renderSingle(status, protocol, dob, apiMsg) {
+  const box = document.getElementById('result');
+  let dobDisplay = dob || '';
+  if (dob && dob.includes('-')) { const [y,m,d]=dob.split('-'); dobDisplay=`${d}/${m}/${y}`; }
+
+  const configs = {
+    found:    { cls:'res-found',    icon:'✅', en:'Protocol Found',
+      notes:`<div class="note"><span class="note-bullet">•</span><span>يمكنك حجز ميعاد بهذا البروتوكول.</span></div>
+             <div class="note"><span class="note-bullet">•</span><span>كلمنا على تيليجرام ونحجزلك في أقرب ميعاد بأقل الأسعار 👇</span></div>
+             <div class="note"><a class="tg-link" href="https://t.me/AlmTravel" target="_blank">✈️ @AlmTravel</a></div>` },
+    not_found:{ cls:'res-notfound', icon:'⚠️', en:'Protocol Not Found',
+      notes:`<div class="note"><span class="note-bullet">•</span><span>البروتوكول لسه مش متسجل في النظام.</span></div>
+             <div class="note"><span class="note-bullet">•</span><span>أو أنت أدخلت رقم البروتوكول غلط، تأكد منه وحاول تاني.</span></div>
+             <div class="note"><span class="note-bullet">•</span><span>أو تاريخ الميلاد الموجود في الأكاونت <span class="dob-tag">${dobDisplay}</span> مختلف عن اللي موجود في العقد — تأكد إنه هو هو.</span></div>` },
+    already_used:{ cls:'res-used', icon:'🔒', en:'Protocol Already Used',
+      notes:`<div class="note"><span class="note-bullet">•</span><span>هذا البروتوكول تم حجز ميعاد بيه من قبل ولا يمكن استخدامه مرة أخرى.</span></div>` },
+  };
+
+  const cfg = configs[status] || { cls:'res-error', icon:'❌', en:'Error',
+    notes:`<div class="note"><span class="note-bullet">•</span><span>${apiMsg || 'حدث خطأ، حاول مرة أخرى.'}</span></div>` };
+
+  box.className = cfg.cls;
+  box.innerHTML = `
+    <div class="res-inner">
+      <div class="res-title">
+        <span class="res-icon">${cfg.icon}</span>
+        <div>
+          <div class="res-en">${cfg.en}</div>
+          ${protocol ? `<div class="res-proto-tag"># ${protocol}</div>` : ''}
+        </div>
+      </div>
+      <div class="res-notes">${cfg.notes}</div>
+    </div>`;
+  box.style.display = 'block';
+  box.scrollIntoView({ behavior:'smooth', block:'nearest' });
+}
+
+// ══════════════════════════════════════════
+// Single check
+// ══════════════════════════════════════════
+function setSingleLoading(on) {
+  document.getElementById('btn-single').disabled = on;
+  document.getElementById('spin-single').style.display = on ? 'block' : 'none';
+  document.getElementById('btn-single-text').textContent = on ? 'جاري الفحص...' : '🔍 فحص الآن';
+}
+
+async function doSingle() {
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value.trim();
+  const protocol = document.getElementById('protocol').value.trim();
+  if (!username || !password || !protocol) {
+    renderSingle('error', protocol, '', 'أدخل جميع الحقول.');
+    return;
+  }
+  setSingleLoading(true);
+  document.getElementById('result').style.display = 'none';
+  try {
+    const r    = await fetch(SERVER+'/api/check', { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':API_KEY}, body:JSON.stringify({username,password,protocol}) });
+    const data = await r.json();
+    if (!data.ok) { renderSingle('error', protocol, '', data.error || 'تحقق من بياناتك.'); return; }
+    renderSingle(data.status, protocol, data.dob, data.message);
+  } catch(e) {
+    renderSingle('error', protocol, '', 'تعذر الاتصال بالسيرفر.');
+  } finally { setSingleLoading(false); }
+}
+
+// ══════════════════════════════════════════
+// Bulk check
+// ══════════════════════════════════════════
+const STATUS_MAP = {
+  found:        { icon:'✅', label:'Found',        rowCls:'r-found' },
+  not_found:    { icon:'❌', label:'Not Found',    rowCls:'r-notfound' },
+  already_used: { icon:'🔒', label:'Already Used', rowCls:'r-used' },
+};
+const counts = { found:0, used:0, notfound:0, error:0 };
+
+// تخزين الـ entries والـ errors عشان إعادة الفحص
+let allEntries = [];
+let errorEntries = [];
+
+function resetCounts() {
+  counts.found=0; counts.used=0; counts.notfound=0; counts.error=0;
+  ['found','used','notfound','error'].forEach(k => document.getElementById('cnt-'+k).textContent='0');
+}
+
+function incCount(status) {
+  const map = { found:'found', already_used:'used', not_found:'notfound' };
+  const key = map[status] || 'error';
+  counts[key]++;
+  document.getElementById('cnt-'+key).textContent = counts[key];
+}
+
+function updateProgress(done, total) {
+  const pct = Math.round(done/total*100);
+  document.getElementById('prog-fill').style.width = pct+'%';
+  document.getElementById('prog-pct').textContent  = pct+'%';
+  document.getElementById('prog-label').textContent =
+    done < total ? `جاري الفحص... (${done}/${total})` : `✅ اكتمل الفحص (${total}/${total})`;
+}
+
+function addRow(entry, pending=false, errorMsg='') {
+  const { idx, username, protocol } = entry;
+  const list  = document.getElementById('bulk-list');
+  const rowId = 'row-'+idx;
+  const status = entry.status || '';
+  const cfg    = STATUS_MAP[status] || { icon:'⚠️', label:'Error', rowCls:'r-error' };
+
+  if (pending) {
+    const div = document.createElement('div');
+    div.id = rowId;
+    div.className = 'bulk-row r-pending';
+    div.innerHTML = `
+      <div class="row-badge"><span class="badge-spin">⏳</span></div>
+      <div class="row-info">
+        <div class="row-proto">${protocol}</div>
+        <div class="row-user">${username}</div>
+      </div>
+      <div class="row-status">جاري...</div>`;
+    list.appendChild(div);
+    return;
+  }
+
+  const row = document.getElementById(rowId);
+  if (!row) return;
+  row.className = 'bulk-row '+cfg.rowCls;
+
+  // لو error → وضّح السبب
+  const isError = !STATUS_MAP[status];
+  const retryBadge = isError && !entry.retryable ? ' <span style="font-size:.7rem;opacity:.6">(أكاونت غلط)</span>' : '';
+  const errorNote = isError && errorMsg
+    ? `<div class="row-error-msg">⚠️ ${errorMsg}${retryBadge}</div>` : '';
+
+  row.innerHTML = `
+    <div class="row-badge">${cfg.icon}</div>
+    <div class="row-info">
+      <div class="row-proto">${protocol}</div>
+      <div class="row-user">${username}</div>
+      ${errorNote}
+    </div>
+    <div class="row-status">${cfg.label}</div>`;
+}
+
+async function runEntries(entries) {
+  errorEntries = [];
+  updateProgress(0, entries.length);
+
+  document.getElementById('btn-bulk').disabled = true;
+  document.getElementById('btn-retry').style.display = 'none';
+  document.getElementById('spin-bulk').style.display = 'block';
+  document.getElementById('btn-bulk-text').textContent = 'جاري الفحص...';
+
+  for (let i = 0; i < entries.length; i++) {
+    const entry = entries[i];
+    const { username, password, protocol } = entry;
+    let status = 'error';
+    let errMsg = 'خطأ في الاتصال بالسيرفر';
+
+    try {
+      const r    = await fetch(SERVER+'/api/check', { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':API_KEY}, body:JSON.stringify({username,password,protocol}) });
+      const data = await r.json();
+      if (data.ok) {
+        status = data.status || 'error';
+        errMsg = '';
+        entry.retryable = false;
+      } else {
+        status = 'error';
+        errMsg = data.error || 'خطأ غير معروف';
+        // 401 = أكاونت غلط → مش قابل لإعادة الفحص
+        entry.retryable = !(r.status === 401 || errMsg.includes('كلمة المرور') || errMsg.includes('غلط') || errMsg.includes('Wrong'));
+      }
+    } catch(e) {
+      status = 'error';
+      errMsg = 'تعذر الاتصال بالسيرفر';
+      entry.retryable = true;
+    }
+
+    entry.status = status;
+    entry.errMsg = errMsg;
+
+    // أضف للـ retry بس لو retryable
+    if (status === 'error' && entry.retryable) errorEntries.push(entry);
+
+    addRow(entry, false, errMsg);
+    incCount(status);
+    updateProgress(i+1, entries.length);
+
+    if (i < entries.length-1) await new Promise(r => setTimeout(r, 500));
+  }
+
+  // done
+  document.getElementById('btn-bulk').disabled = false;
+  document.getElementById('spin-bulk').style.display = 'none';
+  document.getElementById('btn-bulk-text').textContent = `📂 ابدأ الفحص (${bulkLines.length} سطر)`;
+
+  // لو في errors → ظهّر زرار إعادة الفحص
+  if (errorEntries.length > 0) {
+    const btn = document.getElementById('btn-retry');
+    btn.style.display = 'flex';
+    btn.querySelector('span').textContent = `🔁 إعادة فحص (${errorEntries.length} connection error)`;
+  } else {
+    document.getElementById('btn-retry').style.display = 'none';
+  }
+}
+
+async function doBulk() {
+  if (!bulkLines.length) return;
+
+  // parse lines
+  allEntries = bulkLines.map((line, i) => {
+    const parts = line.split(':');
+    return { idx:i, username:parts[0]||'', password:parts[1]||'', protocol:parts.slice(2).join(':') };
+  });
+
+  resetCounts();
+  document.getElementById('bulk-list').innerHTML = '';
+  document.getElementById('bulk-results').style.display = 'block';
+  document.getElementById('bulk-results').scrollIntoView({ behavior:'smooth' });
+
+  // أضف كل الـ rows كـ pending
+  allEntries.forEach(e => addRow(e, true));
+
+  await runEntries(allEntries);
+}
+
+async function doRetry() {
+  if (!errorEntries.length) return;
+
+  const toRetry = [...errorEntries];
+
+  // reset الـ error entries وخليهم pending في الـ UI
+  toRetry.forEach(e => {
+    e.status = '';
+    e.errMsg = '';
+    const row = document.getElementById('row-'+e.idx);
+    if (row) {
+      row.className = 'bulk-row r-pending';
+      row.innerHTML = `
+        <div class="row-badge"><span class="badge-spin">⏳</span></div>
+        <div class="row-info">
+          <div class="row-proto">\${e.protocol}</div>
+          <div class="row-user">\${e.username}</div>
+        </div>
+        <div class="row-status">جاري...</div>`;
+    }
+  });
+
+  // reset counts وأعد حساب الـ non-error من allEntries
+  resetCounts();
+  allEntries.forEach(e => { if (e.status && e.status !== 'error') incCount(e.status); });
+
+  await runEntries(toRetry);
+}
+
+// Enter → single
+document.addEventListener('keydown', e => {
+  if (e.key==='Enter' && document.getElementById('panel-single').classList.contains('active')
+      && !document.getElementById('btn-single').disabled) doSingle();
+});
+</script>
+</body>
+</html>
