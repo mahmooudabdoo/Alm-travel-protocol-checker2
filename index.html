@@ -183,8 +183,6 @@
   .bulk-row {
     background:var(--card); border:1px solid var(--border);
     border-radius:13px; padding:14px 16px;
-    display:grid; grid-template-columns:auto 1fr auto;
-    align-items:center; gap:12px;
     animation:slideUp .3s ease;
   }
   .bulk-row.r-found    { border-color:rgba(10,255,138,.25);  background:linear-gradient(135deg,rgba(10,255,138,.06),rgba(0,200,245,.03)); }
@@ -223,6 +221,9 @@
   .badge-spin { animation:spin .8s linear infinite; display:inline-block; }
 
   .row-error-msg { font-size:.73rem; color:var(--gold); margin-top:3px; line-height:1.4; }
+  .row-top { display:grid; grid-template-columns:auto 1fr auto; gap:12px; align-items:center; }
+  .row-notes { margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,.06); display:flex; flex-direction:column; gap:5px; }
+  .row-note { font-size:.78rem; color:var(--text); line-height:1.55; padding-right:4px; }
   .dropzone-warn {
     font-size:.8rem; color:var(--gold); margin-top:10px; display:none;
     background:rgba(255,201,71,.08); border:1px solid rgba(255,201,71,.2);
@@ -270,6 +271,7 @@
       <span class="brand-icon">✈️</span>
       <span class="brand-name">Alm Travel</span>
     </div>
+    <i class="flag">🇮🇹</i>
     <h1>فحص <span>بروتوكول التأشيرة</span></h1>
     <p>فحص فردي أو رفع ملف لفحص متعدد</p>
   </header>
@@ -378,8 +380,7 @@
 </div>
 
 <script>
-//const SERVER  = "https://almtravel-protocol-checker.onrender.com"; // ← غيّره لـ URL بتاع Render بعد الـ deploy
-const SERVER  = "http://localhost:5000";
+const SERVER  = "http://localhost:5000"; // ← غيّره لـ URL بتاع Render بعد الـ deploy
 const API_KEY = "7b9fc91bca189cf83120ff36a78497cf97b614ab185594ea932feb1118c034e6"; // ← نفس الـ key في Render
 
 // ══════════════════════════════════════════
@@ -453,37 +454,63 @@ dz.addEventListener('drop', e => {
 // ══════════════════════════════════════════
 function renderSingle(status, protocol, dob, apiMsg) {
   const box = document.getElementById('result');
-  let dobDisplay = dob || '';
-  if (dob && dob.includes('-')) { const [y,m,d]=dob.split('-'); dobDisplay=`${d}/${m}/${y}`; }
 
-  const configs = {
-    found:    { cls:'res-found',    icon:'✅', en:'Protocol Found',
-      notes:`<div class="note"><span class="note-bullet">•</span><span>يمكنك حجز ميعاد بهذا البروتوكول.</span></div>
-             <div class="note"><span class="note-bullet">•</span><span>كلمنا على تيليجرام ونحجزلك في أقرب ميعاد بأقل الأسعار 👇</span></div>
-             <div class="note"><a class="tg-link" href="https://t.me/AlmTravel" target="_blank">✈️ @AlmTravel</a></div>` },
-    not_found:{ cls:'res-notfound', icon:'⚠️', en:'Protocol Not Found',
-      notes:`<div class="note"><span class="note-bullet">•</span><span>البروتوكول لسه مش متسجل في النظام.</span></div>
-             <div class="note"><span class="note-bullet">•</span><span>أو أنت أدخلت رقم البروتوكول غلط، تأكد منه وحاول تاني.</span></div>
-             <div class="note"><span class="note-bullet">•</span><span>أو تاريخ الميلاد الموجود في الأكاونت <span class="dob-tag">${dobDisplay}</span> مختلف عن اللي موجود في العقد — تأكد إنه هو هو.</span></div>` },
-    already_used:{ cls:'res-used', icon:'🔒', en:'Protocol Already Used',
-      notes:`<div class="note"><span class="note-bullet">•</span><span>هذا البروتوكول تم حجز ميعاد بيه من قبل ولا يمكن استخدامه مرة أخرى.</span></div>` },
-  };
+  // حساب تاريخ الميلاد
+  let dobDisplay = '';
+  if (dob && dob.includes('-')) {
+    const parts = dob.split('-');
+    dobDisplay = parts[2] + '/' + parts[1] + '/' + parts[0];
+  } else if (dob) {
+    dobDisplay = dob;
+  }
+  const dobTag = dobDisplay
+    ? '<span class="dob-tag">' + dobDisplay + '</span>'
+    : '<span class="dob-tag" style="color:var(--dim)">غير متاح</span>';
 
-  const cfg = configs[status] || { cls:'res-error', icon:'❌', en:'Error',
-    notes:`<div class="note"><span class="note-bullet">•</span><span>${apiMsg || 'حدث خطأ، حاول مرة أخرى.'}</span></div>` };
+  // بناء النتيجة
+  let cls, icon, en, notes;
 
-  box.className = cfg.cls;
-  box.innerHTML = `
-    <div class="res-inner">
-      <div class="res-title">
-        <span class="res-icon">${cfg.icon}</span>
-        <div>
-          <div class="res-en">${cfg.en}</div>
-          ${protocol ? `<div class="res-proto-tag"># ${protocol}</div>` : ''}
-        </div>
-      </div>
-      <div class="res-notes">${cfg.notes}</div>
-    </div>`;
+  if (status === 'found') {
+    cls   = 'res-found';
+    icon  = '✅';
+    en    = 'Protocol Found';
+    notes = '<div class="note"><span class="note-bullet">•</span><span>يمكنك حجز ميعاد بهذا البروتوكول.</span></div>'
+          + '<div class="note"><span class="note-bullet">•</span><span>كلمنا على تيليجرام ونحجزلك في أقرب ميعاد بأقل الأسعار 👇</span></div>'
+          + '<div class="note"><a class="tg-link" href="https://t.me/AlmTravel" target="_blank">✈️ @AlmTravel</a></div>';
+
+  } else if (status === 'not_found') {
+    cls   = 'res-notfound';
+    icon  = '⚠️';
+    en    = 'Protocol Not Found';
+    notes = '<div class="note"><span class="note-bullet">•</span><span>البروتوكول لسه مش متسجل في النظام.</span></div>'
+          + '<div class="note"><span class="note-bullet">•</span><span>أو أنت أدخلت رقم البروتوكول غلط، تأكد منه وحاول تاني.</span></div>'
+          + '<div class="note"><span class="note-bullet">•</span><span>أو تاريخ الميلاد الموجود في الأكاونت ' + dobTag + ' مختلف عن اللي موجود في العقد — تأكد إنه هو هو.</span></div>';
+
+  } else if (status === 'already_used') {
+    cls   = 'res-used';
+    icon  = '🔒';
+    en    = 'Protocol Already Used';
+    notes = '<div class="note"><span class="note-bullet">•</span><span>هذا البروتوكول تم حجز ميعاد بيه من قبل ولا يمكن استخدامه مرة أخرى.</span></div>';
+
+  } else {
+    cls   = 'res-error';
+    icon  = '❌';
+    en    = 'Error';
+    notes = '<div class="note"><span class="note-bullet">•</span><span>' + (apiMsg || 'حدث خطأ، حاول مرة أخرى.') + '</span></div>';
+  }
+
+  box.className = cls;
+  box.innerHTML =
+    '<div class="res-inner">'
+    + '<div class="res-title">'
+    + '<span class="res-icon">' + icon + '</span>'
+    + '<div>'
+    + '<div class="res-en">' + en + '</div>'
+    + (protocol ? '<div class="res-proto-tag"># ' + protocol + '</div>' : '')
+    + '</div>'
+    + '</div>'
+    + '<div class="res-notes">' + notes + '</div>'
+    + '</div>';
   box.style.display = 'block';
   box.scrollIntoView({ behavior:'smooth', block:'nearest' });
 }
@@ -510,6 +537,7 @@ async function doSingle() {
   try {
     const r    = await fetch(SERVER+'/api/check', { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':API_KEY}, body:JSON.stringify({username,password,protocol}) });
     const data = await r.json();
+    console.log('API response:', data);
     if (!data.ok) { renderSingle('error', protocol, '', data.error || 'تحقق من بياناتك.'); return; }
     renderSingle(data.status, protocol, data.dob, data.message);
   } catch(e) {
@@ -583,14 +611,46 @@ function addRow(entry, pending=false, errorMsg='') {
   const errorNote = isError && errorMsg
     ? `<div class="row-error-msg">⚠️ ${errorMsg}${retryBadge}</div>` : '';
 
-  row.innerHTML = `
-    <div class="row-badge">${cfg.icon}</div>
-    <div class="row-info">
-      <div class="row-proto">${protocol}</div>
-      <div class="row-user">${username}</div>
-      ${errorNote}
-    </div>
-    <div class="row-status">${cfg.label}</div>`;
+  // بناء التنبيهات حسب الـ status
+  const dob = entry.dob || '';
+  let dobDisplay = '';
+  if (dob && dob.includes('-')) {
+    const p = dob.split('-');
+    dobDisplay = p[2] + '/' + p[1] + '/' + p[0];
+  }
+  const dobTag = dobDisplay
+    ? '<span class="dob-tag">' + dobDisplay + '</span>'
+    : '<span class="dob-tag" style="color:var(--dim)">غير متاح</span>';
+
+  let rowNotes = '';
+  if (status === 'found') {
+    rowNotes = '<div class="row-notes">'
+      + '<div class="row-note">• يمكنك حجز ميعاد بهذا البروتوكول.</div>'
+      + '<div class="row-note">• كلمنا على تيليجرام ونحجزلك بأقل الأسعار: <a href="https://t.me/AlmTravel" target="_blank" style="color:var(--green)">@AlmTravel</a></div>'
+      + '</div>';
+  } else if (status === 'not_found') {
+    rowNotes = '<div class="row-notes">'
+      + '<div class="row-note">• البروتوكول لسه مش متسجل في النظام.</div>'
+      + '<div class="row-note">• أو الرقم غلط، تأكد منه وحاول تاني.</div>'
+      + '<div class="row-note">• أو تاريخ الميلاد في الأكاونت ' + dobTag + ' مختلف عن العقد.</div>'
+      + '</div>';
+  } else if (status === 'already_used') {
+    rowNotes = '<div class="row-notes">'
+      + '<div class="row-note">• البروتوكول تم حجز ميعاد بيه من قبل.</div>'
+      + '</div>';
+  }
+
+  row.innerHTML =
+    '<div class="row-top">'
+    + '<div class="row-badge">' + cfg.icon + '</div>'
+    + '<div class="row-info">'
+    + '<div class="row-proto">' + protocol + '</div>'
+    + '<div class="row-user">' + username + '</div>'
+    + errorNote
+    + '</div>'
+    + '<div class="row-status">' + cfg.label + '</div>'
+    + '</div>'
+    + rowNotes;
 }
 
 async function runEntries(entries) {
@@ -614,6 +674,7 @@ async function runEntries(entries) {
       if (data.ok) {
         status = data.status || 'error';
         errMsg = '';
+        entry.dob = data.dob || '';
         entry.retryable = false;
       } else {
         status = 'error';
