@@ -239,6 +239,29 @@
     transition:background .2s;
   }
   .btn-retry:hover { background:rgba(255,201,71,.2); }
+  /* ── Login Gate ── */
+  #login-gate {
+    position:fixed; inset:0; z-index:9999;
+    background:var(--bg);
+    display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  #login-gate.hidden { display:none; }
+  .login-box {
+    background:var(--card); border:1px solid var(--border);
+    border-radius:20px; padding:36px 28px; width:100%; max-width:360px;
+    box-shadow:0 0 0 1px rgba(0,200,245,.06), 0 24px 60px rgba(0,0,0,.7);
+    position:relative; overflow:hidden;
+  }
+  .login-box::before {
+    content:''; position:absolute; top:0;left:0;right:0; height:2px;
+    background:linear-gradient(90deg,transparent,var(--accent),var(--green),transparent);
+  }
+  .login-title { text-align:center; margin-bottom:24px; }
+  .login-title .flag { font-size:2.2rem; display:block; margin-bottom:8px; }
+  .login-title h2 { font-size:1.3rem; font-weight:900; color:#fff; }
+  .login-title p  { font-size:.82rem; color:var(--dim); margin-top:4px; }
+  .login-err { font-size:.82rem; color:var(--red); text-align:center; margin-top:10px; display:none; }
+
   /* brand */
   .brand { display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:10px; }
   .brand-icon { font-size:1.5rem; }
@@ -261,6 +284,28 @@
 </style>
 </head>
 <body>
+
+<div id="login-gate">
+  <div class="login-box">
+    <div class="login-title">
+      <span class="flag">✈️</span>
+      <h2>Alm Travel</h2>
+      <p>أدخل كلمة المرور للدخول</p>
+    </div>
+    <div class="field">
+      <label>كلمة المرور</label>
+      <div class="inp-wrap">
+        <input type="password" id="site-password" placeholder="••••••••" onkeydown="if(event.key==='Enter') doSiteLogin()">
+        <span class="inp-icon">🔒</span>
+      </div>
+    </div>
+    <button class="btn" onclick="doSiteLogin()" style="margin-top:4px">
+      <span id="login-btn-text">دخول</span>
+      <div class="spinner" id="login-spinner"></div>
+    </button>
+    <div class="login-err" id="login-err">❌ كلمة المرور غلط</div>
+  </div>
+</div>
 
 <div class="orb orb1"></div>
 <div class="orb orb2"></div>
@@ -380,9 +425,44 @@
 </div>
 
 <script>
-// const SERVER  = "http://localhost:5000"; // ← غيّره لـ URL بتاع Render بعد الـ deploy
-const SERVER  = "https://almtravel-protocol-checker.onrender.com"; // ← غيّره لـ URL بتاع Render بعد الـ deploy
-const API_KEY = "7b9fc91bca189cf83120ff36a78497cf97b614ab185594ea932feb1118c034e6"; // ← نفس الـ key في Render
+
+const SERVER = "http://127.0.0.1:5000";
+let API_KEY  = '';
+
+// ══════════════════════════════════════════
+// Site Login Gate
+// ══════════════════════════════════════════
+async function doSiteLogin() {
+  const pw  = document.getElementById('site-password').value.trim();
+  const err = document.getElementById('login-err');
+  const btn = document.getElementById('login-btn-text');
+  const sp  = document.getElementById('login-spinner');
+
+  if (!pw) return;
+  err.style.display = 'none';
+  btn.textContent = ''; sp.style.display = 'block';
+
+  try {
+    const r    = await fetch(SERVER + '/api/login-site', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pw })
+    });
+    const data = await r.json();
+    if (data.ok) {
+      API_KEY = data.token;
+      document.getElementById('login-gate').classList.add('hidden');
+    } else {
+      err.textContent = '❌ ' + (data.error || 'كلمة المرور غلط');
+      err.style.display = 'block';
+    }
+  } catch(e) {
+    err.textContent = '❌ تعذر الاتصال بالسيرفر';
+    err.style.display = 'block';
+  } finally {
+    btn.textContent = 'دخول'; sp.style.display = 'none';
+  }
+}
 
 // ══════════════════════════════════════════
 // Tab switch
@@ -393,9 +473,6 @@ function switchTab(t) {
     document.getElementById('panel-'+n).classList.toggle('active', n===t);
   });
 }
-
-
-
 
 // ══════════════════════════════════════════
 // File select
@@ -422,7 +499,6 @@ function onFileSelect(inp) {
       .filter(l => l && l.split(':').length >= 3);
 
     if (valid.length === 0) {
-      // الملف فارغ أو فورمات غلط
       bulkLines = [];
       btnEl.disabled = true;
       btnTxt.textContent = '📂 ابدأ الفحص';
@@ -453,10 +529,9 @@ dz.addEventListener('drop', e => {
 // ══════════════════════════════════════════
 // Result renderer (single)
 // ══════════════════════════════════════════
-function renderSingle(status, protocol, dob, apiMsg) {
+function renderSingle(status, protocol, dob, apiMsg, noSlots) {
   const box = document.getElementById('result');
 
-  // حساب تاريخ الميلاد
   let dobDisplay = '';
   if (dob && dob.includes('-')) {
     const parts = dob.split('-');
@@ -468,22 +543,28 @@ function renderSingle(status, protocol, dob, apiMsg) {
     ? '<span class="dob-tag">' + dobDisplay + '</span>'
     : '<span class="dob-tag" style="color:var(--dim)">غير متاح</span>';
 
-  // بناء النتيجة
+  const noSlotsNote = noSlots
+    ? '<div class="note" style="color:var(--gold)"><span class="note-bullet">⏳</span><span>مفيش مواعيد فاضية حالياً — انتظر شوية وحاول مجدداً.</span></div>'
+    : '';
+
   let cls, icon, en, notes;
 
   if (status === 'found') {
-    cls   = 'res-found';
-    icon  = '✅';
-    en    = 'Protocol Found';
-    notes = '<div class="note"><span class="note-bullet">•</span><span>يمكنك حجز ميعاد بهذا البروتوكول.</span></div>'
-          + '<div class="note"><span class="note-bullet">•</span><span>كلمنا على تيليجرام ونحجزلك في أقرب ميعاد بأقل الأسعار 👇</span></div>'
-          + '<div class="note"><a class="tg-link" href="https://t.me/AlmTravel" target="_blank">✈️ @AlmTravel</a></div>';
+    cls   = noSlots ? 'res-error' : 'res-found';
+    icon  = noSlots ? '⏳' : '✅';
+    en    = noSlots ? 'Protocol Valid — No Slots Now' : 'Protocol Found';
+    notes = noSlotsNote
+          + '<div class="note"><span class="note-bullet">•</span><span>البروتوكول صحيح ومتسجل في النظام.</span></div>'
+          + (noSlots ? '' :
+              '<div class="note"><span class="note-bullet">•</span><span>كلمنا على تيليجرام ونحجزلك في أقرب ميعاد بأقل الأسعار 👇</span></div>'
+            + '<div class="note"><a class="tg-link" href="https://t.me/AlmTravel" target="_blank">✈️ @AlmTravel</a></div>');
 
   } else if (status === 'not_found') {
     cls   = 'res-notfound';
     icon  = '⚠️';
     en    = 'Protocol Not Found';
-    notes = '<div class="note"><span class="note-bullet">•</span><span>البروتوكول لسه مش متسجل في النظام.</span></div>'
+    notes = noSlotsNote
+          + '<div class="note"><span class="note-bullet">•</span><span>البروتوكول لسه مش متسجل في النظام.</span></div>'
           + '<div class="note"><span class="note-bullet">•</span><span>أو أنت أدخلت رقم البروتوكول غلط، تأكد منه وحاول تاني.</span></div>'
           + '<div class="note"><span class="note-bullet">•</span><span>أو تاريخ الميلاد الموجود في الأكاونت ' + dobTag + ' مختلف عن اللي موجود في العقد — تأكد إنه هو هو.</span></div>';
 
@@ -496,7 +577,8 @@ function renderSingle(status, protocol, dob, apiMsg) {
   } else {
     cls   = 'res-error';
     icon  = '❌';
-    en    = 'Error';
+    en    = apiMsg && (apiMsg.includes('كلمة المرور') || apiMsg.includes('اسم المستخدم') || apiMsg.includes('غلط'))
+            ? 'Login Failed' : 'Error';
     notes = '<div class="note"><span class="note-bullet">•</span><span>' + (apiMsg || 'حدث خطأ، حاول مرة أخرى.') + '</span></div>';
   }
 
@@ -530,7 +612,7 @@ async function doSingle() {
   const password = document.getElementById('password').value.trim();
   const protocol = document.getElementById('protocol').value.trim();
   if (!username || !password || !protocol) {
-    renderSingle('error', protocol, '', 'أدخل جميع الحقول.');
+    renderSingle('error', protocol, '', 'أدخل جميع الحقول.', false);
     return;
   }
   setSingleLoading(true);
@@ -539,10 +621,10 @@ async function doSingle() {
     const r    = await fetch(SERVER+'/api/check', { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':API_KEY}, body:JSON.stringify({username,password,protocol}) });
     const data = await r.json();
     console.log('API response:', data);
-    if (!data.ok) { renderSingle('error', protocol, '', data.error || 'تحقق من بياناتك.'); return; }
-    renderSingle(data.status, protocol, data.dob, data.message);
+    if (!data.ok) { renderSingle('error', protocol, '', data.error || 'تحقق من بياناتك.', false); return; }
+    renderSingle(data.status, protocol, data.dob, data.message, data.no_slots === true);
   } catch(e) {
-    renderSingle('error', protocol, '', 'تعذر الاتصال بالسيرفر.');
+    renderSingle('error', protocol, '', 'تعذر الاتصال بالسيرفر.', false);
   } finally { setSingleLoading(false); }
 }
 
@@ -556,8 +638,7 @@ const STATUS_MAP = {
 };
 const counts = { found:0, used:0, notfound:0, error:0 };
 
-// تخزين الـ entries والـ errors عشان إعادة الفحص
-let allEntries = [];
+let allEntries   = [];
 let errorEntries = [];
 
 function resetCounts() {
@@ -606,13 +687,11 @@ function addRow(entry, pending=false, errorMsg='') {
   if (!row) return;
   row.className = 'bulk-row '+cfg.rowCls;
 
-  // لو error → وضّح السبب
-  const isError = !STATUS_MAP[status];
+  const isError    = !STATUS_MAP[status];
   const retryBadge = isError && !entry.retryable ? ' <span style="font-size:.7rem;opacity:.6">(أكاونت غلط)</span>' : '';
-  const errorNote = isError && errorMsg
+  const errorNote  = isError && errorMsg
     ? `<div class="row-error-msg">⚠️ ${errorMsg}${retryBadge}</div>` : '';
 
-  // بناء التنبيهات حسب الـ status
   const dob = entry.dob || '';
   let dobDisplay = '';
   if (dob && dob.includes('-')) {
@@ -623,11 +702,14 @@ function addRow(entry, pending=false, errorMsg='') {
     ? '<span class="dob-tag">' + dobDisplay + '</span>'
     : '<span class="dob-tag" style="color:var(--dim)">غير متاح</span>';
 
+  const noSlots = entry.no_slots === true;
   let rowNotes = '';
   if (status === 'found') {
     rowNotes = '<div class="row-notes">'
-      + '<div class="row-note">• يمكنك حجز ميعاد بهذا البروتوكول.</div>'
-      + '<div class="row-note">• كلمنا على تيليجرام ونحجزلك بأقل الأسعار: <a href="https://t.me/AlmTravel" target="_blank" style="color:var(--green)">@AlmTravel</a></div>'
+      + (noSlots
+          ? '<div class="row-note" style="color:var(--gold)">⏳ مفيش مواعيد فاضية حالياً — انتظر شوية وحاول مجدداً.</div>'
+          : '<div class="row-note">• يمكنك حجز ميعاد بهذا البروتوكول.</div>'
+            + '<div class="row-note">• كلمنا على تيليجرام ونحجزلك بأقل الأسعار: <a href="https://t.me/AlmTravel" target="_blank" style="color:var(--green)">@AlmTravel</a></div>')
       + '</div>';
   } else if (status === 'not_found') {
     rowNotes = '<div class="row-notes">'
@@ -673,14 +755,14 @@ async function runEntries(entries) {
       const r    = await fetch(SERVER+'/api/check', { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':API_KEY}, body:JSON.stringify({username,password,protocol}) });
       const data = await r.json();
       if (data.ok) {
-        status = data.status || 'error';
-        errMsg = '';
-        entry.dob = data.dob || '';
+        status          = data.status   || 'error';
+        errMsg          = '';
+        entry.dob       = data.dob      || '';
+        entry.no_slots  = data.no_slots === true;
         entry.retryable = false;
       } else {
         status = 'error';
         errMsg = data.error || 'خطأ غير معروف';
-        // 401 = أكاونت غلط → مش قابل لإعادة الفحص
         entry.retryable = !(r.status === 401 || errMsg.includes('كلمة المرور') || errMsg.includes('غلط') || errMsg.includes('Wrong'));
       }
     } catch(e) {
@@ -692,7 +774,6 @@ async function runEntries(entries) {
     entry.status = status;
     entry.errMsg = errMsg;
 
-    // أضف للـ retry بس لو retryable
     if (status === 'error' && entry.retryable) errorEntries.push(entry);
 
     addRow(entry, false, errMsg);
@@ -702,12 +783,10 @@ async function runEntries(entries) {
     if (i < entries.length-1) await new Promise(r => setTimeout(r, 500));
   }
 
-  // done
   document.getElementById('btn-bulk').disabled = false;
   document.getElementById('spin-bulk').style.display = 'none';
   document.getElementById('btn-bulk-text').textContent = `📂 ابدأ الفحص (${bulkLines.length} سطر)`;
 
-  // لو في errors → ظهّر زرار إعادة الفحص
   if (errorEntries.length > 0) {
     const btn = document.getElementById('btn-retry');
     btn.style.display = 'flex';
@@ -720,7 +799,6 @@ async function runEntries(entries) {
 async function doBulk() {
   if (!bulkLines.length) return;
 
-  // parse lines
   allEntries = bulkLines.map((line, i) => {
     const parts = line.split(':');
     return { idx:i, username:parts[0]||'', password:parts[1]||'', protocol:parts.slice(2).join(':') };
@@ -731,9 +809,7 @@ async function doBulk() {
   document.getElementById('bulk-results').style.display = 'block';
   document.getElementById('bulk-results').scrollIntoView({ behavior:'smooth' });
 
-  // أضف كل الـ rows كـ pending
   allEntries.forEach(e => addRow(e, true));
-
   await runEntries(allEntries);
 }
 
@@ -742,7 +818,6 @@ async function doRetry() {
 
   const toRetry = [...errorEntries];
 
-  // reset الـ error entries وخليهم pending في الـ UI
   toRetry.forEach(e => {
     e.status = '';
     e.errMsg = '';
@@ -752,21 +827,18 @@ async function doRetry() {
       row.innerHTML = `
         <div class="row-badge"><span class="badge-spin">⏳</span></div>
         <div class="row-info">
-          <div class="row-proto">\${e.protocol}</div>
-          <div class="row-user">\${e.username}</div>
+          <div class="row-proto">${e.protocol}</div>
+          <div class="row-user">${e.username}</div>
         </div>
         <div class="row-status">جاري...</div>`;
     }
   });
 
-  // reset counts وأعد حساب الـ non-error من allEntries
   resetCounts();
   allEntries.forEach(e => { if (e.status && e.status !== 'error') incCount(e.status); });
-
   await runEntries(toRetry);
 }
 
-// Enter → single
 document.addEventListener('keydown', e => {
   if (e.key==='Enter' && document.getElementById('panel-single').classList.contains('active')
       && !document.getElementById('btn-single').disabled) doSingle();
