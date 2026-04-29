@@ -426,8 +426,26 @@
 
 <script>
 
-const SERVER = "https://almtravel-protocol-checker.onrender.com";
+const SERVER = "http://127.0.0.1:5000";
 let API_KEY  = '';
+
+// ══════════════════════════════════════════
+// Session expiry handler
+// ══════════════════════════════════════════
+function _handleSessionExpired() {
+  API_KEY = 'https://almtravel-protocol-checker.onrender.com';
+  const err = document.getElementById('login-err');
+  err.textContent = '⏳ انتهت الجلسة — أعد تسجيل الدخول';
+  err.style.display = 'block';
+  document.getElementById('site-password').value = '';
+  document.getElementById('login-gate').classList.remove('hidden');
+}
+
+function _isSessionError(httpStatus, data) {
+  if (httpStatus === 401) return true;
+  if (data && (data.error === 'Session expired' || data.error === 'Unauthorized')) return true;
+  return false;
+}
 
 // ══════════════════════════════════════════
 // Site Login Gate
@@ -621,6 +639,7 @@ async function doSingle() {
     const r    = await fetch(SERVER+'/api/check', { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':API_KEY}, body:JSON.stringify({username,password,protocol}) });
     const data = await r.json();
     console.log('API response:', data);
+    if (_isSessionError(r.status, data)) { _handleSessionExpired(); return; }
     if (!data.ok) { renderSingle('error', protocol, '', data.error || 'تحقق من بياناتك.', false); return; }
     renderSingle(data.status, protocol, data.dob, data.message, data.no_slots === true);
   } catch(e) {
@@ -754,6 +773,14 @@ async function runEntries(entries) {
     try {
       const r    = await fetch(SERVER+'/api/check', { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':API_KEY}, body:JSON.stringify({username,password,protocol}) });
       const data = await r.json();
+      if (_isSessionError(r.status, data)) {
+        // وقّف الـ bulk وارجّع الـ login
+        document.getElementById('btn-bulk').disabled = false;
+        document.getElementById('spin-bulk').style.display = 'none';
+        document.getElementById('btn-bulk-text').textContent = `📂 ابدأ الفحص (${bulkLines.length} سطر)`;
+        _handleSessionExpired();
+        return;
+      }
       if (data.ok) {
         status          = data.status   || 'error';
         errMsg          = '';
@@ -763,7 +790,7 @@ async function runEntries(entries) {
       } else {
         status = 'error';
         errMsg = data.error || 'خطأ غير معروف';
-        entry.retryable = !(r.status === 401 || errMsg.includes('كلمة المرور') || errMsg.includes('غلط') || errMsg.includes('Wrong'));
+        entry.retryable = !(errMsg.includes('كلمة المرور') || errMsg.includes('غلط') || errMsg.includes('Wrong'));
       }
     } catch(e) {
       status = 'error';
